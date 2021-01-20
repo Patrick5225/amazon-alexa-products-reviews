@@ -1,0 +1,234 @@
+---
+title: "amazon_analysis"
+author: "Patrick Chao"
+output: html_document
+---
+
+# Outline of Analysis:
+1. Get a high level understanding of the data (shape, columns, data types, range of fields, etc.)
+2. Looking at ratings and reviews by quantity or average
+3. Observing variations of products
+4. Getting a closer look into what reviews are saying
+
+# Part 1: Understanding the data
+
+## The data
+
+| Column| Definition|
+|:--|:---|
+|  rating|  Rating of the product on a 5-star rating sytem|
+|  date|  Date of the review |
+|  variation|  Variant of the product|
+|  verified_reviews|  Customer's review of the product|
+|  feedback|  0 if negative review, 1 if positive review|
+
+Importing the packages needed for analyzing dataset:
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(RColorBrewer)
+library(lubridate) # for working with date objects
+```
+
+```{r}
+# read and store data into the DataFrame
+df <- read.csv("amazon_alexa.tsv", sep = "\t")
+```
+
+Here, we will get ourselves familiar with the data by exploring how many rows and columns there are, the variable types, etc.
+
+```{r}
+# taking a look at the dataset
+glimpse(df)
+```
+There are 3150 rows and 5 columns in our dataset.
+
+```{r}
+head(df,3) # first 3 rows
+tail(df,3) # last 3 rows
+```
+
+
+```{r}
+# summary statistics of data
+summary(df)
+```
+Just by observing the summary statistics, we see that the mean of the rating and feedback are quite high. We will observe this further in our exploratory data analysis later.
+
+```{r}
+# check unique values of rating
+unique(df['rating'])
+```
+Ratings on this data only take in whole number values from 1 through 5. Note that the index number just represents the index of the row where each unique rating is first encountered in the dataset.
+
+Now, is there any association between rating and feedback? As noted, a value of 0 for feedback means that the feedback as negative, and a value of 1 for feedback indicates a positive feedback.
+
+```{r}
+# find the minimum and maximum rating for each type of feedback
+df %>% select(rating, feedback) %>% group_by(feedback) %>% summarise(minimum_rating = min(rating), maximum_rating = max(rating))
+```
+
+It seems that negative feedbacks only have ratings of either a 1 or a 2, and positive feedbacks have ratings of 3 or higher.
+
+Next, let's check the range of dates of the date field.
+```{r}
+# get earliest date
+min(dmy(df$date))
+
+# get latest date
+max(dmy(df$date))
+```
+The range of dates of the entire dataframe are all in the year 2018 from the months of May to July.
+
+```{r}
+# check for missing values
+sum(is.na(df))
+```
+
+There are no missing values on the data, so we do not have to worry about working with them.
+
+## Adding columns
+Currently our dataset is pretty limited in terms of the amount of variables it has. However there are some features we can extract out of the existing variables and add on to our dataframe that we can use for our analysis later on. We'll start with estimating the length of each of the reviews.
+
+```{r}
+# save function that splits each word in each review
+word_split <- strsplit(as.character(df$verified_reviews), split=" ")
+
+# calculate length of amount of words in each review and
+# add to a new column called review_length
+df$review_length <- sapply(word_split, length)
+
+# looking at data
+glimpse(df)
+```
+
+Next, we will extract the month and day of the week of each observation and add these to our dataframe.
+```{r}
+# get the month of each observation as an integer
+month_number <- month(dmy(df$date))
+
+# get month names and store as new column into df
+df$month <- month.name[month_number]
+
+# get the day of the week of each observation and store
+# as a new column
+df$day_of_week <- as.character(wday(dmy(df$date), label=TRUE))
+
+# looking at data
+glimpse(df)
+```
+
+# Part 2: Measuring Ratings and Reviews
+**How are the ratings distributed for Amazon products? Which rating occurs most often?**
+
+Let's start by looking at a bar chart of the ratings to see what people think of Amazon Alexa products.
+
+```{r}
+ggplot(data=df, aes(x=factor(rating), fill=factor(rating))) + 
+  geom_bar() + 
+  geom_text(stat='count', aes(label=..count..), position=position_stack(0.5)) +
+  labs(x="Rating", y="Count") +
+  ggtitle("Bar Chart of Ratings") +
+  scale_fill_brewer() + 
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
+```
+
+There is a large number of people who rated Amazon products with a 5. A rating of a 4 falls second by a large margin compared to ratings of a 5. It seems like the majority of customers who have reviewed the products are satisfied with their purchase.
+
+**How often were reviews written on each month and each day of the week?**
+```{r}
+ggplot(data=df, mapping = aes(x=factor(month, level= c('May','June','July')), fill=month)) + 
+  geom_bar(fill='steelblue') +
+  geom_text(stat='count', aes(label=..count..), position=position_stack(0.5)) +
+  labs(x="Month", y="Count") +
+  ggtitle("Bar Chart of Reviews Written by Month") +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
+```
+
+Most of the reviews from the data were written on the month of July. This graph could just have been a result of how the data was originally extracted.
+
+```{r}
+ggplot(data=df, mapping = aes(x=factor(day_of_week, level= c('Sun','Mon','Tue','Wed','Thu','Fri','Sat')), fill=day_of_week)) + 
+  geom_bar(fill='steelblue') +
+  geom_text(stat='count', aes(label=..count..), position=position_stack(0.5)) +
+  labs(x="Day of Week", y="Count") +
+  ggtitle("Bar Chart of Reviews Written by Day of the Week") +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
+```
+
+Most reviews were written on Mondays and Sundays. A plausible explanation for this could be that most people order products on Fridays or during the weekend. And since Amazon guarantees a 2-day delivery date for customers who are members of Amazon Prime, people will write their reviews on Sunday or Monday, the same day they receive their delivery.
+
+**What were the average ratings by month or day of week?**
+
+```{r}
+df %>% 
+group_by(month) %>% 
+summarise(AverageRating = mean(rating)) %>% 
+  ggplot(aes(factor(month, levels=c('May','June','July')), AverageRating, label=round(AverageRating,2), fill=factor(month))) +
+  geom_col(fill='steelblue') +
+  geom_text(position=position_stack(0.5)) +
+  labs(x="Month", y='Average Rating') +
+  ylim(0,5) +
+  ggtitle("Average Ratings by Month") +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
+```
+
+The average ratings are quite similar to each other, with ratings from each month being higher than 4.00 and July having the highest rating of all months. Though, we should be careful with comparing July to the other months since July had much more reviews than May and June.
+
+```{r}
+# average ratings by day of week
+df %>% 
+group_by(day_of_week) %>% 
+summarise(AverageRating = mean(rating)) %>% 
+  ggplot(aes(factor(day_of_week, levels=c('Sun','Mon','Tue','Wed','Thu','Fri','Sat')), AverageRating, label=round(AverageRating,2), fill=factor(day_of_week))) +
+  geom_col(fill='steelblue') +
+  geom_text(position=position_stack(0.5)) +
+  labs(x="Day of Week", y='Average Rating') +
+  ylim(0,5) +
+  ggtitle("Average Ratings by Day of the Week") +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
+```
+
+Average ratings are all above 4.00 and are not too much different from each other. The highest average ratings occur on the weekend, Monday, and Wednesday, where each ratings are around 4.5. Reviews written on Thursdays and Fridays have the lowest average ratings.
+
+# Part 3: Looking at the different variations of Amazon Products
+
+Let's observe if there are any specific variations that customers prefer over the other.
+
+**Which variation are most frequently rated, and which have the highest average rating?**
+
+```{r}
+# bar chart for count of variation of products in descending order
+ggplot(data=df, aes(x=fct_rev(fct_infreq(variation)), fill=factor(variation))) + 
+  geom_bar(fill='steelblue') + 
+  geom_text(stat='count', aes(label=..count..), position=position_stack(0.5)) +
+  coord_flip() +
+  labs(x="Variation", y="Count") +
+  ggtitle("Bar Chart of Variation of Products") +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
+```
+
+The bar chart shows that customers in the dataset have mostly bought black-colored products.
+
+```{r}
+# bar chart for average rating of variation of products in descending order
+df %>% 
+group_by(variation) %>% 
+summarise(AverageRating = mean(rating)) %>% 
+  ggplot(aes(factor(variation), AverageRating, label=round(AverageRating,2), fill=factor(variation))) +
+  geom_col(fill='steelblue', aes(reorder(variation,AverageRating),AverageRating)) +
+  geom_text(position=position_stack(0.5)) +
+  coord_flip() +  
+  labs(x="Variation", y='Average Rating') +
+  ylim(0,5) +
+  ggtitle("Average Ratings by Variation") +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
+```
+
+All products have average ratings of more than 4.00. Highest average rated products seem to be Walnut Finish and Oak Finish, but note that these products didn't have much reviews to begin with as shown in the bar chart of variation of products. Fabric products are the next highest average rated products and have much more reviews than the Finish products.
+
+# Part 4: What are reviews saying?
+**What is the distribution of the length of reviews?**
+```{r}
+# histogram
+```
