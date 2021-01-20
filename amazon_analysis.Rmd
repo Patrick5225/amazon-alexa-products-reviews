@@ -129,7 +129,7 @@ ggplot(data=df, aes(x=factor(rating), fill=factor(rating))) +
   geom_text(stat='count', aes(label=..count..), position=position_stack(0.5)) +
   labs(x="Rating", y="Count") +
   ggtitle("Bar Chart of Ratings") +
-  scale_fill_brewer() + 
+  scale_fill_brewer(palette='RdYlGn') + 
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
 ```
 
@@ -178,14 +178,14 @@ The average ratings are quite similar to each other, with ratings from each mont
 ```{r}
 # average ratings by day of week
 df %>% 
-group_by(day_of_week) %>% 
+  group_by(day_of_week) %>% 
 summarise(AverageRating = mean(rating)) %>% 
-  ggplot(aes(factor(day_of_week, levels=c('Sun','Mon','Tue','Wed','Thu','Fri','Sat')), AverageRating, label=round(AverageRating,2), fill=factor(day_of_week))) +
-  geom_col(fill='steelblue') +
-  geom_text(position=position_stack(0.5)) +
-  labs(x="Day of Week", y='Average Rating') +
-  ylim(0,5) +
-  ggtitle("Average Ratings by Day of the Week") +
+    ggplot(aes(factor(day_of_week, levels=c('Sun','Mon','Tue','Wed','Thu','Fri','Sat')), AverageRating, label=round(AverageRating,2), fill=factor(day_of_week))) +
+    geom_col(fill='steelblue') +
+    geom_text(position=position_stack(0.5)) +
+    labs(x="Day of Week", y='Average Rating') +
+    ylim(0,5) +
+    ggtitle("Average Ratings by Day of the Week") +
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
 ```
 
@@ -213,16 +213,16 @@ The bar chart shows that customers in the dataset have mostly bought black-color
 ```{r}
 # bar chart for average rating of variation of products in descending order
 df %>% 
-group_by(variation) %>% 
-summarise(AverageRating = mean(rating)) %>% 
-  ggplot(aes(factor(variation), AverageRating, label=round(AverageRating,2), fill=factor(variation))) +
-  geom_col(fill='steelblue', aes(reorder(variation,AverageRating),AverageRating)) +
-  geom_text(position=position_stack(0.5)) +
-  coord_flip() +  
+  group_by(variation) %>% 
+  summarise(AverageRating = mean(rating)) %>% 
+    ggplot(aes(factor(variation), AverageRating, label=round(AverageRating,2), fill=factor(variation))) +
+    geom_col(fill='steelblue', aes(reorder(variation,AverageRating),AverageRating)) +
+    geom_text(position=position_stack(0.5)) +
+    coord_flip() +  
   labs(x="Variation", y='Average Rating') +
-  ylim(0,5) +
-  ggtitle("Average Ratings by Variation") +
-  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
+    ylim(0,5) +
+    ggtitle("Average Ratings by Variation") +
+    theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
 ```
 
 All products have average ratings of more than 4.00. Highest average rated products seem to be Walnut Finish and Oak Finish, but note that these products didn't have much reviews to begin with as shown in the bar chart of variation of products. Fabric products are the next highest average rated products and have much more reviews than the Finish products.
@@ -230,5 +230,59 @@ All products have average ratings of more than 4.00. Highest average rated produ
 # Part 4: What are reviews saying?
 **What is the distribution of the length of reviews?**
 ```{r}
-# histogram
+# histogram of length of reviews
+ggplot(data=df, aes(x=review_length)) + 
+  geom_histogram(fill='steelblue',binwidth=10) +
+  labs(x="Length of Reviews (in words)", y='Count') +
+  ggtitle("Histogram of Length of Reviews") +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
 ```
+
+Most reviews seems to be below 50 words, but there are some huge outliers with length of reviews beyond 100 words. We can filter out outliers using the Interquartile Range Rule and plot another histogram to better see the distribution of length of reviews.
+
+```{r}
+# calculate and store Q1 for review_length
+q1 = as.numeric(df %>% summarise(quantile(review_length,probs=0.25)))
+
+# calculate and store Q3 for review_length
+q3 = as.numeric(df %>% summarise(quantile(review_length,probs=0.75)))
+
+# calculate and store IQR for review_length
+iqr = as.numeric(df %>% summarise(q3-q1))
+
+# plotting histogram of length of reviews without outliers
+df %>% 
+  filter(review_length < (q3 + 1.5 * iqr)) %>%
+  ggplot(aes(x=review_length)) + 
+  geom_histogram(fill='steelblue',binwidth=5) +
+  labs(x="Length of Reviews (in words)", y='Count') +
+  ggtitle("Histogram of Length of Reviews (without outliers)") +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
+```
+
+We can tell that most reviews are pretty short with word counts of less than 20.
+
+```{r}
+ggplot(data=df, aes(x=as.character(rating),y=review_length,fill=as.factor(rating))) + 
+  geom_boxplot() +
+  coord_flip() + 
+  scale_fill_brewer(palette='RdYlGn') +
+  labs(x="Rating", y='Length of Reviews (in words)') +
+  ggtitle("Boxplot of Review Length by Rating") +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
+```
+
+Most reviews are short in terms of amount of words it has, regardless of what the rating seems to be. Let's examine the boxplot closer by filtering using the same IQR rule on review length.
+
+```{r}
+df %>% filter(review_length < (q3 + 1.5 * iqr)) %>%
+ggplot( aes(x=as.character(rating),y=review_length,fill=as.factor(rating))) + 
+  geom_boxplot() +
+  coord_flip() + 
+  scale_fill_brewer(palette='RdYlGn') +
+  labs(x="Rating", y='Length of Reviews (in words)') +
+  ggtitle("Boxplot of Review Length by Rating") +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
+```
+
+Reviews rated with a 2 are generally the longest reviews compared to other reviews. Reviews that have a rating of a 5 tends to be the shortest.
