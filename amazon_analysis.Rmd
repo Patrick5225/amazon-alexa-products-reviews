@@ -1,14 +1,17 @@
 ---
-title: "amazon_analysis"
+title: "Amazon Alexa Products Analysis"
 author: "Patrick Chao"
 output: html_document
 ---
+## Brief Overview
+Amazon is well-known for selling products on its website. For this analysis, we'll be focusing on Amazon Alexa products (basically those that has a virtual assistant AI named Alexa), including products like the Amazon Echo, Amazon TV Sticks, etc. We'll analyze a dataset containing reviews of these Amazon Alexa products and observe what customers think about the products.
 
-# Outline of Analysis:
+## Outline of Analysis:
 1. Get a high level understanding of the data (shape, columns, data types, range of fields, etc.)
 2. Looking at ratings and reviews by quantity or average
 3. Observing variations of products
-4. Getting a closer look into what reviews are saying
+4. Comparing length of reviews vs. ratings
+5. Getting a closer look into what reviews are saying
 
 # Part 1: Understanding the data
 
@@ -22,17 +25,24 @@ output: html_document
 |  verified_reviews|  Customer's review of the product|
 |  feedback|  0 if negative review, 1 if positive review|
 
-Importing the packages needed for analyzing dataset:
+Importing the packages needed:
 ```{r, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(ggplot2)
-library(RColorBrewer)
+library(RColorBrewer) # color palettes
+library(tidytext)
+library(wordcloud)
+library(grid) # grid packages to plot side-by-side plots
+library(gridExtra)
 library(lubridate) # for working with date objects
 ```
 
 ```{r}
 # read and store data into the DataFrame
 df <- read.csv("amazon_alexa.tsv", sep = "\t")
+
+# transforming the field verified_reviews into character
+df <- transform(df, verified_reviews = as.character(verified_reviews))
 ```
 
 Here, we will get ourselves familiar with the data by exploring how many rows and columns there are, the variable types, etc.
@@ -72,11 +82,8 @@ It seems that negative feedbacks only have ratings of either a 1 or a 2, and pos
 
 Next, let's check the range of dates of the date field.
 ```{r}
-# get earliest date
-min(dmy(df$date))
-
-# get latest date
-max(dmy(df$date))
+# grab the earliest and latest date
+df %>% select(date) %>% summarise(earliest_date = min(dmy(df$date)), latest_date = max(dmy(df$date)))
 ```
 The range of dates of the entire dataframe are all in the year 2018 from the months of May to July.
 
@@ -92,7 +99,7 @@ Currently our dataset is pretty limited in terms of the amount of variables it h
 
 ```{r}
 # save function that splits each word in each review
-word_split <- strsplit(as.character(df$verified_reviews), split=" ")
+word_split <- strsplit(df$verified_reviews, split=" ")
 
 # calculate length of amount of words in each review and
 # add to a new column called review_length
@@ -125,7 +132,7 @@ Let's start by looking at a bar chart of the ratings to see what people think of
 
 ```{r}
 ggplot(data=df, aes(x=factor(rating), fill=factor(rating))) + 
-  geom_bar() + 
+  geom_bar(color='black') + 
   geom_text(stat='count', aes(label=..count..), position=position_stack(0.5)) +
   labs(x="Rating", y="Count") +
   ggtitle("Bar Chart of Ratings") +
@@ -138,7 +145,7 @@ There is a large number of people who rated Amazon products with a 5. A rating o
 **How often were reviews written on each month and each day of the week?**
 ```{r}
 ggplot(data=df, mapping = aes(x=factor(month, level= c('May','June','July')), fill=month)) + 
-  geom_bar(fill='steelblue') +
+  geom_bar(color='black',fill='steelblue') +
   geom_text(stat='count', aes(label=..count..), position=position_stack(0.5)) +
   labs(x="Month", y="Count") +
   ggtitle("Bar Chart of Reviews Written by Month") +
@@ -149,7 +156,7 @@ Most of the reviews from the data were written on the month of July. This graph 
 
 ```{r}
 ggplot(data=df, mapping = aes(x=factor(day_of_week, level= c('Sun','Mon','Tue','Wed','Thu','Fri','Sat')), fill=day_of_week)) + 
-  geom_bar(fill='steelblue') +
+  geom_bar(color='black',fill='steelblue') +
   geom_text(stat='count', aes(label=..count..), position=position_stack(0.5)) +
   labs(x="Day of Week", y="Count") +
   ggtitle("Bar Chart of Reviews Written by Day of the Week") +
@@ -165,7 +172,7 @@ df %>%
 group_by(month) %>% 
 summarise(AverageRating = mean(rating)) %>% 
   ggplot(aes(factor(month, levels=c('May','June','July')), AverageRating, label=round(AverageRating,2), fill=factor(month))) +
-  geom_col(fill='steelblue') +
+  geom_col(color='black',fill='steelblue') +
   geom_text(position=position_stack(0.5)) +
   labs(x="Month", y='Average Rating') +
   ylim(0,5) +
@@ -181,7 +188,7 @@ df %>%
   group_by(day_of_week) %>% 
 summarise(AverageRating = mean(rating)) %>% 
     ggplot(aes(factor(day_of_week, levels=c('Sun','Mon','Tue','Wed','Thu','Fri','Sat')), AverageRating, label=round(AverageRating,2), fill=factor(day_of_week))) +
-    geom_col(fill='steelblue') +
+    geom_col(color='black',fill='steelblue') +
     geom_text(position=position_stack(0.5)) +
     labs(x="Day of Week", y='Average Rating') +
     ylim(0,5) +
@@ -200,7 +207,7 @@ Let's observe if there are any specific variations that customers prefer over th
 ```{r}
 # bar chart for count of variation of products in descending order
 ggplot(data=df, aes(x=fct_rev(fct_infreq(variation)), fill=factor(variation))) + 
-  geom_bar(fill='steelblue') + 
+  geom_bar(color='black',fill='steelblue') + 
   geom_text(stat='count', aes(label=..count..), position=position_stack(0.5)) +
   coord_flip() +
   labs(x="Variation", y="Count") +
@@ -216,7 +223,7 @@ df %>%
   group_by(variation) %>% 
   summarise(AverageRating = mean(rating)) %>% 
     ggplot(aes(factor(variation), AverageRating, label=round(AverageRating,2), fill=factor(variation))) +
-    geom_col(fill='steelblue', aes(reorder(variation,AverageRating),AverageRating)) +
+    geom_col(color='black',fill='steelblue', aes(reorder(variation,AverageRating),AverageRating)) +
     geom_text(position=position_stack(0.5)) +
     coord_flip() +  
   labs(x="Variation", y='Average Rating') +
@@ -227,12 +234,12 @@ df %>%
 
 All products have average ratings of more than 4.00. Highest average rated products seem to be Walnut Finish and Oak Finish, but note that these products didn't have much reviews to begin with as shown in the bar chart of variation of products. Fabric products are the next highest average rated products and have much more reviews than the Finish products.
 
-# Part 4: What are reviews saying?
+# Part 4: Length of Reviews
 **What is the distribution of the length of reviews?**
 ```{r}
 # histogram of length of reviews
 ggplot(data=df, aes(x=review_length)) + 
-  geom_histogram(fill='steelblue',binwidth=10) +
+  geom_histogram(color='black',fill='steelblue',binwidth=10) +
   labs(x="Length of Reviews (in words)", y='Count') +
   ggtitle("Histogram of Length of Reviews") +
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
@@ -254,7 +261,7 @@ iqr = as.numeric(df %>% summarise(q3-q1))
 df %>% 
   filter(review_length < (q3 + 1.5 * iqr)) %>%
   ggplot(aes(x=review_length)) + 
-  geom_histogram(fill='steelblue',binwidth=5) +
+  geom_histogram(color='black',fill='steelblue',binwidth=5) +
   labs(x="Length of Reviews (in words)", y='Count') +
   ggtitle("Histogram of Length of Reviews (without outliers)") +
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
@@ -276,7 +283,7 @@ Most reviews are short in terms of amount of words it has, regardless of what th
 
 ```{r}
 df %>% filter(review_length < (q3 + 1.5 * iqr)) %>%
-ggplot( aes(x=as.character(rating),y=review_length,fill=as.factor(rating))) + 
+ggplot(aes(x=as.character(rating),y=review_length,fill=as.factor(rating))) + 
   geom_boxplot() +
   coord_flip() + 
   scale_fill_brewer(palette='RdYlGn') +
@@ -286,3 +293,64 @@ ggplot( aes(x=as.character(rating),y=review_length,fill=as.factor(rating))) +
 ```
 
 Reviews rated with a 2 are generally the longest reviews compared to other reviews. Reviews that have a rating of a 5 tends to be the shortest.
+
+# Part 5: What are reviews saying?
+**What are some of the most commonly used words in reviews of Amazon products by positive and negative reviews?**
+
+```{r}
+# split the verified_reviews field into words
+review_words <- unnest_tokens(df, word, verified_reviews)
+
+# evaluate the opinion/emotion from text using Bing Liu's sentimental analysis
+review_sentiment <- review_words %>%
+    inner_join(get_sentiments(lexicon = "bing"), by = "word") %>%
+    count(word, sentiment) %>%
+    mutate(color = ifelse(sentiment == "positive", "seagreen", "red"))
+
+# create a wordcloud for the sentiment of words used in reviews
+wordcloud(words = review_sentiment$word, freq = review_sentiment$n, max.words=100, random.order = FALSE, colors = review_sentiment$color, ordered.colors = TRUE)
+```
+
+In the word cloud above, the most used words are indicated by size. Also, the words are colored by sentiment where the green-colored words are positive words and red-colored words are negative. For the most part, we can see that Amazon products are liked by customers, where they used words such as "love" and "great" in their reviews.
+
+Let's see the actual numbers by looking at bar charts of the amount of times these words occur.
+
+```{r}
+# create a bar chart of top 10 positive words
+plot_positive <- review_sentiment %>%
+    filter(sentiment == "positive") %>%
+    arrange(desc(n)) %>%
+    slice(1:10) %>%
+    ggplot(aes(x = reorder(word, n), y = n)) +
+        geom_col(color = "black", fill='limegreen') +
+        geom_text(aes(label = n), position = position_stack(vjust = 0.5)) +
+        coord_flip() +
+        ggtitle("Top 10 Positive Words") +
+        labs(x = "Word", y = "Count") +
+        theme(legend.position = "none",
+              plot.title = element_text(hjust = 0.5))
+
+# create a bar chart of top 10 negative words
+plot_negative <- review_sentiment %>%
+    filter(sentiment == "negative") %>%
+    arrange(desc(n)) %>%
+    slice(1:10) %>%
+    ggplot(aes(x = reorder(word, n), y = n)) +
+        geom_col(color = "black", fill='lightcoral') +
+        geom_text(aes(label = n), position = position_stack(vjust = 0.5)) +
+        coord_flip() +
+        ggtitle("Top 10 Negative Words") +
+        labs(x = "", y = "Count") +
+        theme(legend.position = "none",
+              plot.title = element_text(hjust = 0.5))
+
+# plot top positive and negative plots side-by-side
+grid.arrange(plot_positive, plot_negative, nrow=1, ncol=2, top=textGrob("Top Words in Reviews by Sentiment",gp=gpar(fontsize=15,font=2)))
+```
+
+Words like "love" and "great" do indeed take the top spots for most frequently used positive words in reviews, as we speculated from the word cloud. Moreover, these positive words have high counts, so it seems that Amazon products are doing great overall.
+
+If we look at the negative words, we see that there are indeed words that can be considered negative such as "issues" and "problems", but the word "alarm" might be an invalid word to be classified as negative, so this is a word on the bar chart that we should be careful about. Still, the word counts of negative words are quite low, so there seem to be far less customers who said negative things compared to customers who said positive things about the Amazon products in their reviews.
+
+# Conclusion
+Overall, it seems like customers are satisfied with their Amazon Alexa products. We measured the ratings and reviews and observed that most reviews gave a rating of 5. Ratings among the variation of products are quite similar to each other and are all doing well. Generally, lower ratings have higher word counts than higher ratings. Also, many reviews have left positive feelings about the Amazon products indicating that the customers loved and think that the products are great. But there are reviews in the other hand that have given negative feedback saying that the customers has issues or problems and are disappointed with their purchase.
