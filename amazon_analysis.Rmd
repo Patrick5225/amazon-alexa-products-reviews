@@ -1,7 +1,9 @@
 ---
 title: "Amazon Alexa Products Analysis"
 author: "Patrick Chao"
-output: html_document
+output: 
+  html_document:
+    code_folding: hide
 ---
 ## Brief Overview
 Amazon is well-known for selling products on its website. For this analysis, we'll be focusing on Amazon Alexa products (basically those that has a virtual assistant AI named Alexa), including products like the Amazon Echo, Amazon TV Sticks, etc. We'll analyze a dataset containing reviews of these Amazon Alexa products and observe what customers think about the products.
@@ -26,7 +28,7 @@ Amazon is well-known for selling products on its website. For this analysis, we'
 |  feedback|  0 if negative review, 1 if positive review|
 
 Importing the packages needed:
-```{r, message=FALSE, warning=FALSE}
+```{r class.source = 'fold-show', message=FALSE, warning=FALSE}
 library(tidyverse)
 library(ggplot2)
 library(RColorBrewer) # color palettes
@@ -37,7 +39,8 @@ library(gridExtra)
 library(lubridate) # for working with date objects
 ```
 
-```{r}
+Loading the data:
+```{r class.source = 'fold-show'}
 # read and store data into the DataFrame
 df <- read.csv("amazon_alexa.tsv", sep = "\t")
 
@@ -53,6 +56,7 @@ glimpse(df)
 ```
 There are 3150 rows and 5 columns in our dataset.
 
+Next, let's check some of the rows of our data and the summary statistics of the entire dataset.
 ```{r}
 head(df,3) # first 3 rows
 tail(df,3) # last 3 rows
@@ -311,7 +315,7 @@ review_sentiment <- review_words %>%
 wordcloud(words = review_sentiment$word, freq = review_sentiment$n, max.words=100, random.order = FALSE, colors = review_sentiment$color, ordered.colors = TRUE)
 ```
 
-In the word cloud above, the most used words are indicated by size. Also, the words are colored by sentiment where the green-colored words are positive words and red-colored words are negative. For the most part, we can see that Amazon products are liked by customers, where they used words such as "love" and "great" in their reviews.
+In the word cloud above, the most used words are indicated by size. So larger sized words mean higher counts, and smaller sized words mean lower counts. Also, the words are colored by sentiment where the green-colored words are positive words and red-colored words are negative. For the most part, we can see that Amazon products are liked by customers, where they used words such as "love" and "great" in their reviews.
 
 Let's see the actual numbers by looking at bar charts of the amount of times these words occur.
 
@@ -350,7 +354,9 @@ grid.arrange(plot_positive, plot_negative, nrow=1, ncol=2, top=textGrob("Top Wor
 
 Words like "love" and "great" do indeed take the top spots for most frequently used positive words in reviews, as we speculated from the word cloud. Moreover, these positive words have high counts, so it seems that Amazon products are doing great overall.
 
-If we look at the negative words, we see that there are indeed words that can be considered negative such as "issues" and "problems", but the word "alarm" might be an invalid word to be classified as negative, so this is a word on the bar chart that we should be careful about. Still, the word counts of negative words are quite low, so there seem to be far less customers who said negative things compared to customers who said positive things about the Amazon products in their reviews.
+If we look at the negative words, we see that there are indeed words that can be considered negative such as "issues" and "problems", but the word "alarm" might be an invalid word to be classified as negative, so this is a word on the bar chart that we should be careful about.
+
+Still, the word counts of negative words are quite low, so there seem to be far less customers who said negative things compared to customers who said positive things about the Amazon products in their reviews.
 
 # Conclusion
 Overall, it seems like customers are satisfied with their Amazon Alexa products. We measured the ratings and reviews and observed that most reviews gave a rating of 5. Ratings among the variation of products are quite similar to each other and are all doing well. Generally, lower ratings have higher word counts than higher ratings. Also, many reviews have left positive feelings about the Amazon products indicating that the customers loved and think that the products are great. But there are reviews in the other hand that have given negative feedback saying that the customers has issues or problems and are disappointed with their purchase.
