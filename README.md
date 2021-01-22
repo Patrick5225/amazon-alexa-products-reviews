@@ -1,4 +1,4 @@
-<img src="/images/amazon_products.jpeg" width="700" height="300">
+<img src="/images/amazon_products.jpeg" width="500" height="200">
 
 # Amazon Reviews of Alexa Products Analysis
 
@@ -9,6 +9,11 @@ Amazon sells various products of their own on their website. One of the set of p
 - **R version**: 3.5.0 
 - **Packages**: tidyverse (for dplyr and ggplot2), RColorBrewer, tidytext, wordcloud, grid, gridExtra, lubridate
 - **Data source**: https://www.kaggle.com/sid321axn/amazon-alexa-reviews
+
+## Main Files in this Repository
+`amazon_analysis.html` Contains exploratory data analysis with visuals, tables, and charts</br>
+`amazon_analysis.Rmd` R markdown file that contains the code used to create `amazon_analysis.html`</br>
+`amazon_alexa.tsv` Text file that contains the data
 
 # EDA Highlights
 <img src="/images/rating_chart.png" width="600" height="400">
