@@ -30,7 +30,6 @@ Amazon is well-known for selling products on its website. For this analysis, we'
 Importing the packages needed:
 ```{r class.source = 'fold-show', message=FALSE, warning=FALSE}
 library(tidyverse)
-library(ggplot2)
 library(RColorBrewer) # color palettes
 library(tidytext)
 library(wordcloud)
