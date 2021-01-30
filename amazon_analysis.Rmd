@@ -134,6 +134,7 @@ glimpse(df)
 Let's start by looking at a bar chart of the ratings to see what people think of Amazon Alexa products.
 
 ```{r}
+# bar chart of ratings
 ggplot(data=df, aes(x=factor(rating), fill=factor(rating))) + 
   geom_bar(color='black') + 
   geom_text(stat='count', aes(label=..count..), position=position_stack(0.5)) +
@@ -143,10 +144,29 @@ ggplot(data=df, aes(x=factor(rating), fill=factor(rating))) +
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
 ```
 
-There is a large number of people who rated Amazon products with a 5. A rating of a 4 falls second by a large margin compared to ratings of a 5. It seems like the majority of customers who have reviewed the products are satisfied with their purchase.
+We can further break this down by type of feedback. According to Amazon, 4 and 5 star ratings are considered "positive" feedback, 3 star ratings are considered "neutral" feedback, and 1 and 2 star ratings are considered "negative" feedback on Amazon.
+
+```{r}
+# create x axis tick labels
+xlabels <- c("Negative","Neutral,","Positive")
+
+# bar chart by type of feedbacks
+df %>% mutate(cuts = cut(rating, c(0, 2, 3, Inf))) %>%
+ggplot(aes(x=factor(cuts), fill=factor(cuts))) + 
+  geom_bar(color='black') + 
+  geom_text(stat='count', aes(label=paste0(..count..," (", c("8.2","4.8","87.0"), "%)")), position=position_stack(0.5)) +
+  labs(x="Type of Feedback", y="Count") +
+  ggtitle("Bar Chart of Type of Feedbacks") +
+  scale_x_discrete(labels= xlabels) +
+  scale_fill_brewer(palette='RdYlGn') + 
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5, face="bold"))
+```
+
+There is a large number of people who rated Amazon products with a 5 star rating. About 87% of customers who reviewed the products were satisfied with their products.
 
 **How often were reviews written on each month and each day of the week?**
 ```{r}
+# bar chart of reviews by month
 ggplot(data=df, mapping = aes(x=factor(month, level= c('May','June','July')), fill=month)) + 
   geom_bar(color='black',fill='steelblue') +
   geom_text(stat='count', aes(label=..count..), position=position_stack(0.5)) +
@@ -158,6 +178,7 @@ ggplot(data=df, mapping = aes(x=factor(month, level= c('May','June','July')), fi
 Most of the reviews from the data were written on the month of July. This graph could just have been a result of how the data was originally extracted.
 
 ```{r}
+# bar chart of reviews by day of week
 ggplot(data=df, mapping = aes(x=factor(day_of_week, level= c('Sun','Mon','Tue','Wed','Thu','Fri','Sat')), fill=day_of_week)) + 
   geom_bar(color='black',fill='steelblue') +
   geom_text(stat='count', aes(label=..count..), position=position_stack(0.5)) +
@@ -171,6 +192,7 @@ Most reviews were written on Mondays and Sundays. A plausible explanation for th
 **What were the average ratings by month or day of week?**
 
 ```{r}
+# average ratings by month
 df %>% 
 group_by(month) %>% 
 summarise(AverageRating = mean(rating)) %>% 
@@ -273,6 +295,7 @@ df %>%
 We can tell that most reviews are pretty short with word counts of less than 20.
 
 ```{r}
+# boxplot of review length by rating
 ggplot(data=df, aes(x=as.character(rating),y=review_length,fill=as.factor(rating))) + 
   geom_boxplot() +
   coord_flip() + 
@@ -285,6 +308,7 @@ ggplot(data=df, aes(x=as.character(rating),y=review_length,fill=as.factor(rating
 Most reviews are short in terms of amount of words it has, regardless of what the rating seems to be. Let's examine the boxplot closer by filtering using the same IQR rule on review length.
 
 ```{r}
+# boxplot of review length by rating
 df %>% filter(review_length < (q3 + 1.5 * iqr)) %>%
 ggplot(aes(x=as.character(rating),y=review_length,fill=as.factor(rating))) + 
   geom_boxplot() +
